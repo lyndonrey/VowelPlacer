@@ -8,8 +8,16 @@ def nonlin(x, deriv=False):
     if (deriv):
         return x*(1-x)
     return 1 / (1+np.exp(-x))
+ 
 
 
+
+# Scrape data from text file from praat, prescaled
+def getDataPrescaled(fn):
+    with open(fn) as f:
+        fLines = f.readlines()
+        data = np.loadtxt(fLines)
+    return data
 
 # Scrape data from text file from praat
 def getData(fn):
@@ -22,11 +30,11 @@ def getData(fn):
 
 
 
-def learn(X, out, alpha, iterations, layers):
-    synapse0 = 2*np.random.random((5, layers)) - 1  
+def learn(X, out, alpha, iterations, layers, notVowel):
+    synapse0 = 2*np.random.random((2, layers)) - 1  
     synapse1 = 2*np.random.random((layers, 1)) - 1
 
-    XunionY = np.concatenate((X, np.random.rand(100,5)), axis=0)    
+    XunionY = np.concatenate((X, getData(notVowel)), axis=0)
     for i in range(iterations):
         #if i % 100 == 0:
         #    Y = np.random.rand(100,2)
@@ -61,8 +69,9 @@ def learn(X, out, alpha, iterations, layers):
 
 
     # return final synapses to test with
-    with open("synapses.csv", "w") as text_file:
+    with open("synapse0.csv", "w") as text_file:
         text_file.write(str(synapse0))
+    with open("synapse1.csv", "w") as text_file:
         text_file.write(str(synapse1))
     return [synapse0, synapse1]
 
@@ -81,29 +90,32 @@ def frange(start, stop, step):
         yield x
         x += step
 
-def testMatrix(s0, s1):
-    count = 0
-    index = 0
-
-    with open("whole_test.csv", "w") as text_file:
-            scaledRaw = getData("out-FAE-HOMELAND_3-75-50.csv")
+def testMatrix(s0, s1, rawData, outFile, thresh):
+    with open(outFile, "w") as text_file:
+            scaledRaw = getData(rawData)
             i = 0
             j = 0
             for l in scaledRaw:
+                print(l)
                 print("Total samples analysed:", i, "Total samples accepted:", j, end='\r')
-                if test(l, s0, s1) > 0.995:
+                if test(l, s0, s1) > float(thresh):
                     text_file.write(str(l) + "\n")
                     j += 1 
                 i += 1
 
-X = getData('i.csv')
+def main():
+    X = getData('i.csv')
 
-Xprime = np.ones((1000,1))
-Yprime = np.zeros((100,1))
-XprimeUnionYprime = np.concatenate((Xprime, Yprime), axis=0)
+    Xprime = np.ones((80064,1))
+    Yprime = np.zeros((899998,1))
+    XprimeUnionYprime = np.concatenate((Xprime, Yprime), axis=0)
 
-print(XprimeUnionYprime)
-s = learn(X, XprimeUnionYprime, 0.1, 10000000, 10)
+    print(XprimeUnionYprime)
+    s = learn(X, XprimeUnionYprime, 0.1, 20000000, 10, "notVowel.csv")
+    return s
+    #print(test([0.0190, 0.2050], s[0], s[1], s[2]))
 
-testMatrix(s[0], s[1])
-#print(test([0.0190, 0.2050], s[0], s[1], s[2]))
+
+
+if __name__ == "__main__":
+    main()
